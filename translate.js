@@ -6,8 +6,9 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') { res.status(200).end(); return; }
 
-  const { title, description, keywords, languages } = req.body || {};
-  if (!title || !languages || !languages.length) {
+  const body = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
+const { title, description, keywords, languages } = body;
+      if (!title || !languages || !languages.length) {
     return res.status(400).json({ error: 'title과 languages는 필수입니다.' });
   }
 
