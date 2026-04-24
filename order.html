@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>Order</title>
+</head>
+<body>
+
+<h2>번역 결과 붙여넣기</h2>
+<textarea id="inputBox" style="width:100%;height:300px;"></textarea><br>
+
+<button onclick="openOAuth()">구글 인증</button>
+<button onclick="register()">유튜브 등록</button>
+
+<div id="countBox"></div>
+
+<script>
+let accessToken = null;
+
+function openOAuth() {
+  window.open("YOUR_OAUTH_URL","oauth","width=500,height=600");
+}
+
+window.addEventListener("message", function(event){
+  if(event.data.type==="YOUTUBE_AUTH_SUCCESS"){
+    accessToken = event.data.accessToken;
+  }
+});
+
+function register(){
+  if(!accessToken){
+    alert("먼저 구글 승인을 진행해 주세요");
+    return;
+  }
+
+  const originalText = document.getElementById("inputBox").value;
+
+  const count = (originalText.match(/Country Code:/g)||[]).length;
+  document.getElementById("countBox").innerText = count;
+
+  const safeText = JSON.stringify(originalText).slice(1,-1);
+
+  sendToYouTube(safeText);
+}
+
+function sendToYouTube(text){
+  fetch("https://www.googleapis.com/youtube/v3/videos?part=localizations",{
+    method:"PUT",
+    headers:{
+      "Authorization":"Bearer "+accessToken,
+      "Content-Type":"application/json"
+    },
+    body: JSON.stringify({
+      id:"YOUR_VIDEO_ID",
+      localizations: buildLocalizations(text)
+    })
+  });
+}
+
+function buildLocalizations(text){
+  const blocks = text.split("Country Code:").slice(1);
+  const result = {};
+
+  blocks.forEach(block=>{
+    const lines = block.trim().split("\n");
+    const code = lines[0].trim();
+
+    const titleLine = lines.find(l=>l.startsWith("Title:"))||"";
+    const descIndex = lines.findIndex(l=>l.startsWith("Description:"));
+
+    const title = titleLine.replace("Title:","").trim();
+
+    let description="";
+    if(descIndex!==-1){
+      description = lines.slice(descIndex+1).join("\n");
+    }
+
+    result[code] = {
+      title:title,
+      description:description
+    };
+  });
+
+  return result;
+}
+</script>
+
+</body>
+</html>
